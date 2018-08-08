@@ -61,8 +61,47 @@ impl Basket {
                 if self.inner[0].1.len() <= size_index + 1 {
                     new.push(self.inner.remove(0));
                 } else {
-                    let first = &mut self.inner[0];
+                    let mut first = &mut self.inner[0];
                     new.push((first.0.clone(), first.1.drain(0..size_index + 1).collect::<VecDeque<_>>()));
+                }
+            }
+
+            Basket {
+                inner: new
+            }
+        }
+    }
+
+    pub fn split_1(&mut self, price: i32, size: u32) -> Basket {
+        let sums = self.inner.iter()
+            .filter(|(p, _)| *p <= price)
+            .map(|(_, s_vec)| s_vec.iter().map(|(size, _)| *size).fold(0, |acc, s| acc + s))
+            .scan(0, |sum, size_sum| {
+                *sum += size_sum;
+                Some(*sum)
+            })
+            .take_while(|sum| sum <= &size)
+            .collect::<Vec<_>>();
+
+        if sums.len() == 0 {
+            Basket::new()
+        } else {
+            let mut new = self.inner.drain(0..sums.len()).collect::<Vec<_>>();
+
+            let already_moved = sums.last().unwrap(); // The last element must be awarded.
+            if self.inner.get(0).filter(|(p, _)| *p <= price).is_some() {
+               let to_move_count: usize = self.inner[0].1.iter().scan(*already_moved, |sum, (size, _)| {
+                    *sum += size;
+                    Some(*sum)
+                }).take_while(|sum| sum <= &size)
+                    .map(|_| 1)
+                    .sum();
+
+                if to_move_count == self.inner[0].1.len() {
+                    new.push(self.inner.remove(0));
+                } else {
+                    let mut first = &mut self.inner[0];
+                    new.push((first.0.clone(), first.1.drain(0..to_move_count).collect::<VecDeque<_>>()));
                 }
             }
 
@@ -170,6 +209,50 @@ fn split_test() {
     basket.put(22, 1, 105);
     basket.put(23, 2, 106);
     let new = basket.split(22, 33);
+    check_basket(&new, vec![(20, vec![&(1, 101)]), (21, vec![&(1, 102), &(1, 103), &(1, 104)]), (22, vec![&(1, 105)])]);
+    check_basket(&basket, vec![(23, vec![&(2, 106)])]);
+}
+
+
+#[test]
+fn split_1_test() {
+    let mut basket = Basket::new();
+    let other = basket.split_1(1000, 1000);
+    check_basket(&basket, vec![]);
+    check_basket(&other, vec![]);
+
+    basket.put(20, 1, 101);
+    basket.put(21, 1, 102);
+    basket.put(21, 1, 103);
+    basket.put(21, 1, 104);
+    basket.put(22, 1, 105);
+    basket.put(23, 2, 106);
+    let new = basket.split_1(21, 3);
+    check_basket(&new, vec![(20, vec![&(1, 101)]), (21, vec![&(1, 102), &(1, 103)])]);
+    check_basket(&basket, vec![(21, vec![&(1, 104)]), (22, vec![&(1, 105)]), (23, vec![&(2, 106)])]);
+
+    let mut basket = Basket::new();
+    basket.put(20, 1, 101);
+    let new = basket.split_1(21, 3);
+
+    check_basket(&new, vec![(20, vec![&(1, 101)])]);
+    check_basket(&basket, vec![]);
+
+    let mut basket = Basket::new();
+    basket.put(20, 1, 101);
+    let new = basket.split_1(1, 3);
+
+    check_basket(&new, vec![]);
+    check_basket(&basket, vec![(20, vec![&(1, 101)])]);
+
+    let mut basket = Basket::new();
+    basket.put(20, 1, 101);
+    basket.put(21, 1, 102);
+    basket.put(21, 1, 103);
+    basket.put(21, 1, 104);
+    basket.put(22, 1, 105);
+    basket.put(23, 2, 106);
+    let new = basket.split_1(22, 33);
     check_basket(&new, vec![(20, vec![&(1, 101)]), (21, vec![&(1, 102), &(1, 103), &(1, 104)]), (22, vec![&(1, 105)])]);
     check_basket(&basket, vec![(23, vec![&(2, 106)])]);
 }

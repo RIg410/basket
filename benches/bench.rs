@@ -69,22 +69,36 @@ fn split_bench(c: &mut Criterion, test_name: &str, data: Vec<PutData>) {
     });
 }
 
+fn split_1_bench(c: &mut Criterion, test_name: &str, data: Vec<PutData>) {
+    c.bench_function(test_name, move |b| {
+        b.iter_with_large_setup(
+            || make_split_data(data.clone()),
+            |(mut basket, split)| {
+                basket.split_1(split.0, split.1);
+            });
+    });
+}
+
 fn bench(c: &mut Criterion) {
     let data = make_put_data(100, 10);
     put_bench(c, "put_test[price 100, size: 10]", data.clone());
     split_bench(c, "split_test[price 100, size: 10]", data.clone());
+    split_1_bench(c, "split_1_test[price 100, size: 10]", data.clone());
 
     let data = make_put_data(100, 100);
     put_bench(c, "put_test[price 100, size: 100]", data.clone());
     split_bench(c, "split_test[price 100, size: 100]", data.clone());
+    split_1_bench(c, "split_1_test[price 100, size: 100]", data.clone());
 
     let data = make_put_data(1000, 10);
     put_bench(c, "put_test[price 1000, size: 10]", data.clone());
     split_bench(c, "split_test[price 1000, size: 10]", data.clone());
+    split_1_bench(c, "split_1_test[price 1000, size: 10]", data.clone());
 
     let data = make_put_data(1000, 100);
     put_bench(c, "put_test[price 1000, size: 100]", data.clone());
-    split_bench(c, "split_test[price 1000, size: 10]", data.clone());
+    split_bench(c, "split_test[price 1000, size: 100]", data.clone());
+    split_1_bench(c, "split_1_test[price 1000, size: 100]", data.clone());
 }
 
 criterion_group!(benches, bench);
