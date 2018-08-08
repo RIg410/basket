@@ -10,5 +10,5 @@ criterion = "*"
 rand = "0.5.4"
 
 [[bench]]
-name = "banch"
+name = "bench"
 harness = false
