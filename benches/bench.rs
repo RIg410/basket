@@ -9,9 +9,11 @@ use criterion::Criterion;
 use criterion::ParameterizedBenchmark;
 use std::sync::Arc;
 
-fn make_put_data(price_count: usize, size_count: usize) -> Vec<(Price, Size, Meta)> {
+type PutData = (Price, Size, Meta);
+
+fn make_put_data(price_count: usize, size_count: usize) -> Vec<PutData> {
     use rand;
-    let mut res: Vec<(Price, Size, Meta)> = (1..price_count)
+    let mut res: Vec<PutData> = (1..price_count)
         .map(|_| rand::random::<Price>())
         .map(|p| (p, (1..size_count).map(|_| rand::random::<Size>())))
         .flat_map(|(p, r)| r.map(|s| (p, s, rand::random::<u64>() as Meta)).collect::<Vec<_>>())
@@ -21,9 +23,8 @@ fn make_put_data(price_count: usize, size_count: usize) -> Vec<(Price, Size, Met
     res
 }
 
-fn make_split_data(price_count: usize, size_count: usize) -> (Basket, (Price, Size)) {
+fn make_split_data(data: Vec<PutData>) -> (Basket, (Price, Size)) {
     let mut basket = Basket::new();
-    let data = make_put_data(price_count, size_count);
 
     data.iter()
         .for_each(|(price, size, meta)| {
@@ -46,10 +47,10 @@ fn put_test(mut basket: Basket, data: Vec<(Price, Size, Meta)>) {
     }
 }
 
-fn put_bench(c: &mut Criterion, price_count: usize, size_count: usize) {
-    c.bench_function(&format!("put_test[price {0}, size: {1}]", price_count, size_count), move |b| {
+fn put_bench(c: &mut Criterion, test_name: &str, data: Vec<PutData>) {
+    c.bench_function(test_name, move |b| {
         b.iter_with_large_setup(
-            || (Basket::new(), make_put_data(price_count, size_count)),
+            || (Basket::new(), data.clone()),
             |(mut basket, data)| {
                 for call_item in data {
                     basket.put(call_item.0, call_item.1, call_item.2);
@@ -58,10 +59,10 @@ fn put_bench(c: &mut Criterion, price_count: usize, size_count: usize) {
     });
 }
 
-fn split_bench(c: &mut Criterion, price_count: usize, size_count: usize) {
-    c.bench_function(&format!("split_test[price {0}, size: {1}]", price_count, size_count), move |b| {
+fn split_bench(c: &mut Criterion, test_name: &str, data: Vec<PutData>) {
+    c.bench_function(test_name, move |b| {
         b.iter_with_large_setup(
-            || make_split_data(price_count, size_count),
+            || make_split_data(data.clone()),
             |(mut basket, split)| {
                 basket.split(split.0, split.1);
             });
@@ -69,17 +70,21 @@ fn split_bench(c: &mut Criterion, price_count: usize, size_count: usize) {
 }
 
 fn bench(c: &mut Criterion) {
-    put_bench(c, 100, 10);
-    split_bench(c, 100, 10);
+    let data = make_put_data(100, 10);
+    put_bench(c, "put_test[price 100, size: 10]", data.clone());
+    split_bench(c, "split_test[price 100, size: 10]", data.clone());
 
-    put_bench(c, 100, 100);
-    split_bench(c, 100, 100);
+    let data = make_put_data(100, 100);
+    put_bench(c, "put_test[price 100, size: 100]", data.clone());
+    split_bench(c, "split_test[price 100, size: 100]", data.clone());
 
-    put_bench(c, 1000, 10);
-    split_bench(c, 1000, 10);
+    let data = make_put_data(1000, 10);
+    put_bench(c, "put_test[price 1000, size: 10]", data.clone());
+    split_bench(c, "split_test[price 1000, size: 10]", data.clone());
 
-    put_bench(c, 1000, 100);
-    split_bench(c, 1000, 100);
+    let data = make_put_data(1000, 100);
+    put_bench(c, "put_test[price 1000, size: 100]", data.clone());
+    split_bench(c, "split_test[price 1000, size: 10]", data.clone());
 }
 
 criterion_group!(benches, bench);
