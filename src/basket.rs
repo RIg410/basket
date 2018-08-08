@@ -90,7 +90,7 @@ impl Basket {
 
             let already_moved = sums.last().unwrap(); // The last element must be awarded.
             if self.inner.get(0).filter(|(p, _)| *p <= price).is_some() {
-               let to_move_count: usize = self.inner[0].1.iter().scan(*already_moved, |sum, (size, _)| {
+                let to_move_count: usize = self.inner[0].1.iter().scan(*already_moved, |sum, (size, _)| {
                     *sum += size;
                     Some(*sum)
                 }).take_while(|sum| sum <= &size)
@@ -212,7 +212,6 @@ fn split_test() {
     check_basket(&new, vec![(20, vec![&(1, 101)]), (21, vec![&(1, 102), &(1, 103), &(1, 104)]), (22, vec![&(1, 105)])]);
     check_basket(&basket, vec![(23, vec![&(2, 106)])]);
 }
-
 
 #[test]
 fn split_1_test() {
